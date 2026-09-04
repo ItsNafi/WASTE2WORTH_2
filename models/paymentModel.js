@@ -1,20 +1,21 @@
 const pool = require('../config/db');
 
 const PaymentModel = {
-  /** Record a payment transaction */
-  async create({ senderId, receiverId, amount, type, referenceId }) {
-    const [result] = await pool.execute(
-      'INSERT INTO Payments (senderId, receiverId, amount, type, referenceId) VALUES (?, ?, ?, ?, ?)',
-      [senderId, receiverId || null, amount, type, referenceId]
+  /** Record a payment transaction (supports optional transaction connection) */
+  async create({ senderId, receiverId, amount, type, referenceId, status = 'Completed' }, connection = null) {
+    const db = connection || pool;
+    const [result] = await db.execute(
+      'INSERT INTO Payments (senderId, receiverId, amount, type, referenceId, status) VALUES (?, ?, ?, ?, ?, ?)',
+      [senderId, receiverId || null, amount, type, referenceId, status]
     );
     return {
       paymentId: result.insertId,
       senderId,
-      receiverId,
+      receiverId: receiverId || null,
       amount,
       type,
       referenceId,
-      status: 'Completed'
+      status
     };
   },
 
@@ -49,15 +50,24 @@ const PaymentModel = {
     const [rows] = await pool.execute(
       `SELECT p.*,
               s.name AS senderName,
-              r.name AS receiverName
+              COALESCE(r.name, 'Cleanup Campaign Fund') AS receiverName
        FROM Payments p
-       JOIN Users s ON p.senderId = s.id
+       LEFT JOIN Users s ON p.senderId = s.id
        LEFT JOIN Users r ON p.receiverId = r.id
        WHERE p.senderId = ? OR p.receiverId = ?
        ORDER BY p.createdAt DESC`,
       [userId, userId]
     );
     return rows;
+  },
+
+  /** Check if campaign registration waste has already been settled/purchased */
+  async findByRegistration(registrationId) {
+    const [rows] = await pool.execute(
+      "SELECT * FROM Payments WHERE type = 'BhangariToVolunteer' AND referenceId = ?",
+      [registrationId]
+    );
+    return rows[0] || null;
   },
 
   /** Get total profit for a creator from CustomerCheckout payments */

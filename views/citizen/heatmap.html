@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Waste Heat Map — WASTE2WORTH</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <!-- Leaflet CSS (no SRI to avoid CDN mismatch) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    /* ── Map wrapper forces explicit height ── */
+    .map-wrapper {
+      background: #e8eaed;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+      height: 540px;
+      position: relative;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+    }
+    /* Ensure Leaflet tiles render above nothing */
+    .leaflet-tile-pane { z-index: 2 !important; }
+    .leaflet-overlay-pane { z-index: 4 !important; }
+    .leaflet-marker-pane { z-index: 6 !important; }
+    .leaflet-popup-pane { z-index: 8 !important; }
+
+    .map-controls {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 12px; align-items: center;
+    }
+    .toggle-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 20px; border-radius: 100px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      border: 2px solid transparent; transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    .toggle-btn.waste   { background:#e8f5e9; color:#2e7d32; border-color:#4caf50; }
+    .toggle-btn.waste.off { background:#f5f5f5; color:#aaa; border-color:#ddd; }
+    .toggle-btn.pollution   { background:#fce4ec; color:#c62828; border-color:#e53935; }
+    .toggle-btn.pollution.off { background:#f5f5f5; color:#aaa; border-color:#ddd; }
+    .toggle-dot { width:10px; height:10px; border-radius:50%; display:inline-block; }
+
+    .stats-chips { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
+    .stats-chip {
+      display:inline-flex; align-items:center; gap:6px;
+      padding:6px 14px; border-radius:100px; font-size:13px; font-weight:600;
+      background:var(--color-bg-body); border:1px solid var(--color-border);
+      color:var(--color-text-secondary);
+    }
+    .stats-chip .material-icons-outlined { font-size:16px; }
+
+    .map-legend {
+      display:flex; gap:20px; flex-wrap:wrap;
+      margin-top:12px; font-size:13px; color:var(--color-text-secondary);
+    }
+    .legend-item { display:flex; align-items:center; gap:6px; }
+    .legend-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+
+    .leaflet-popup-content { font-family:'Inter',sans-serif; font-size:13px; min-width:210px; line-height:1.5; }
+    .popup-title { font-weight:700; font-size:14px; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:6px; }
+    .popup-row { display:flex; justify-content:space-between; margin-bottom:4px; gap:8px; }
+    .popup-label { color:#888; white-space:nowrap; }
+    .popup-badge { display:inline-block; padding:2px 8px; border-radius:100px; font-size:11px; font-weight:700; }
+    .badge-available { background:#e8f5e9; color:#2e7d32; }
+    .badge-reserved  { background:#fff3e0; color:#e65100; }
+    .badge-pending   { background:#fce4ec; color:#c62828; }
+    .badge-review    { background:#e3f2fd; color:#1565c0; }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+
+    <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="material-icons-outlined">eco</span> WASTE2WORTH
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/dashboard/citizen" class="nav-item"><span class="material-icons-outlined">home</span> Dashboard</a>
+      <a href="/dashboard/citizen/price-directory" class="nav-item"><span class="material-icons-outlined">sell</span> Price Directory</a>
+      <a href="/dashboard/citizen/pollution" class="nav-item"><span class="material-icons-outlined">report_problem</span> Report Pollution</a>
+      <a href="/citizen/heatmap" class="nav-item active"><span class="material-icons-outlined">map</span> Waste Heat Map</a>
+      <a href="/storefront" class="nav-item"><span class="material-icons-outlined">storefront</span> Storefront</a>
+      <div class="nav-section-title">Account</div>
+      <a href="/logout" id="logoutBtn" class="nav-item"><span class="material-icons-outlined">logout</span> Logout</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div style="font-size:12px;color:rgba(255,255,255,0.5);text-align:center;">&copy; 2026 WASTE2WORTH</div>
+    </div>
+  </aside>
+
+  <div class="main-wrapper">
+    <header class="header">
+      <button id="sidebarToggle" class="sidebar-toggle">
+        <span class="material-icons-outlined">menu</span>
+      </button>
+      <div class="header-search">
+        <span class="material-icons-outlined">map</span>
+        <input type="text" placeholder="Waste Heat Map" aria-label="Page title" readonly style="cursor:default;">
+      </div>
+      <div class="header-user" id="headerUser">
+        <div class="user-info">
+          <span class="user-name" id="headerUserName">Citizen</span>
+          <span class="user-role">Citizen</span>
+        </div>
+        <div class="user-avatar" id="headerUserAvatar">C</div>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <div class="page-header animate-fade-in">
+        <h1 class="page-title">🗺️ Geographical Waste Heat Map</h1>
+        <p class="page-subtitle">Live view of citizen waste listings and reported pollution complaints across operational zones.</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-chips">
+        <div class="stats-chip">
+          <span class="material-icons-outlined" style="color:#4caf50;">recycling</span>
+          <span id="wasteCount">—</span> Waste Listings
+        </div>
+        <div class="stats-chip">
+          <span class="material-icons-outlined" style="color:#e53935;">report_problem</span>
+          <span id="pollCount">—</span> Pollution Reports
+        </div>
+        <div class="stats-chip" id="loadingChip">
+          <span class="material-icons-outlined">hourglass_top</span> Loading data…
+        </div>
+      </div>
+
+      <!-- Toggles -->
+      <div class="map-controls">
+        <button class="toggle-btn waste" id="btnWaste" onclick="toggleLayer('waste')">
+          <span class="toggle-dot" style="background:#4caf50;"></span> Waste Listings
+        </button>
+        <button class="toggle-btn pollution" id="btnPollution" onclick="toggleLayer('pollution')">
+          <span class="toggle-dot" style="background:#e53935;"></span> Pollution Reports
+        </button>
+      </div>
+
+      <!-- Map -->
+      <div class="card animate-slide-up" style="padding:0; overflow:hidden;">
+        <div class="map-wrapper">
+          <div id="map"></div>
+        </div>
+      </div>
+
+      <!-- Legend -->
+      <div class="map-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#4caf50;"></div> Waste — Available</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#ff9800;"></div> Waste — Reserved</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#e53935;"></div> Pollution — Pending</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#7b1fa2;"></div> Pollution — Under Review</div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Leaflet JS (synchronous, before our script) -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/js/app.js" defer></script>
+<script>
+/* ── Wait for DOM + Leaflet ─────────────────────────────────────── */
+window.addEventListener('load', function() {
+
+  // ── Init map ──────────────────────────────────────────────────
+  var map = L.map('map', {
+    center: [23.7808, 90.4125],
+    zoom: 11,
+    zoomControl: true
+  });
+
+  // OSM tile layer
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+    crossOrigin: true
+  }).addTo(map);
+
+  // Force size recalculation after layout paint
+  setTimeout(function() { map.invalidateSize(true); }, 300);
+
+  // ── Sidebar toggle ────────────────────────────────────────────
+  var sidebarToggle = document.getElementById('sidebarToggle');
+  var appLayout = document.querySelector('.app-layout');
+  if (sidebarToggle && appLayout) {
+    sidebarToggle.addEventListener('click', function() {
+      appLayout.classList.toggle('sidebar-collapsed');
+      setTimeout(function() { map.invalidateSize(true); }, 350);
+    });
+  }
+
+  // ── Icon factory ──────────────────────────────────────────────
+  function makeIcon(color) {
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" width="24" height="36">'
+      + '<path d="M12 0C5.37 0 0 5.37 0 12c0 9 12 24 12 24S24 21 24 12C24 5.37 18.63 0 12 0z" fill="' + color + '" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>'
+      + '<circle cx="12" cy="12" r="4.5" fill="rgba(255,255,255,0.9"/>'
+      + '</svg>';
+    return L.icon({
+      iconUrl: 'data:image/svg+xml;base64,' + btoa(svg),
+      iconSize: [24, 36], iconAnchor: [12, 36], popupAnchor: [0, -38]
+    });
+  }
+
+  var ICONS = {
+    waste_available:   makeIcon('#4caf50'),
+    waste_reserved:    makeIcon('#ff9800'),
+    pollution_pending: makeIcon('#e53935'),
+    pollution_review:  makeIcon('#7b1fa2')
+  };
+
+  // ── Layer groups ──────────────────────────────────────────────
+  var wasteGroup     = L.layerGroup().addTo(map);
+  var pollutionGroup = L.layerGroup().addTo(map);
+  var layerState     = { waste: true, pollution: true };
+
+  window.toggleLayer = function(layer) {
+    layerState[layer] = !layerState[layer];
+    var grp = layer === 'waste' ? wasteGroup : pollutionGroup;
+    var btn = document.getElementById(layer === 'waste' ? 'btnWaste' : 'btnPollution');
+    if (layerState[layer]) { grp.addTo(map); btn.classList.remove('off'); }
+    else { map.removeLayer(grp); btn.classList.add('off'); }
+  };
+
+  function fmtDate(d) {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+  }
+
+  // ── Fetch data and plot ───────────────────────────────────────
+  fetch('/api/heatmap-data', { credentials: 'include' })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      document.getElementById('loadingChip').style.display = 'none';
+      var waste = data.wasteListings || [];
+      var poll  = data.pollutionReports || [];
+      document.getElementById('wasteCount').textContent = waste.length;
+      document.getElementById('pollCount').textContent  = poll.length;
+
+      // Plot waste
+      waste.forEach(function(w) {
+        var icon = w.status === 'Reserved' ? ICONS.waste_reserved : ICONS.waste_available;
+        var badgeCls = w.status === 'Reserved' ? 'badge-reserved' : 'badge-available';
+        var popup =
+          '<div class="popup-title">♻️ Waste Listing #' + w.id + '</div>' +
+          '<div class="popup-row"><span class="popup-label">Category</span><strong>' + (w.wasteType || '—') + '</strong></div>' +
+          '<div class="popup-row"><span class="popup-label">Weight</span><strong>' + (w.volume || 0) + ' kg</strong></div>' +
+          '<div class="popup-row"><span class="popup-label">Owner</span><span>' + (w.owner || '—') + '</span></div>' +
+          '<div class="popup-row"><span class="popup-label">Status</span><span class="popup-badge ' + badgeCls + '">' + (w.status || '—') + '</span></div>' +
+          '<div class="popup-row"><span class="popup-label">Listed</span><span>' + fmtDate(w.date) + '</span></div>';
+        L.marker([w.lat, w.lng], { icon: icon }).bindPopup(popup).addTo(wasteGroup);
+      });
+
+      // Plot pollution
+      poll.forEach(function(p) {
+        var icon = p.status === 'Under Review' ? ICONS.pollution_review : ICONS.pollution_pending;
+        var badgeCls = p.status === 'Under Review' ? 'badge-review' : 'badge-pending';
+        var desc = (p.description || '').substring(0, 80) + ((p.description || '').length > 80 ? '…' : '');
+        var popup =
+          '<div class="popup-title">🚨 Pollution Report #' + p.id + '</div>' +
+          '<div class="popup-row"><span class="popup-label">Location</span><strong>' + (p.locationPin || '—') + '</strong></div>' +
+          '<div class="popup-row"><span class="popup-label">Details</span><span>' + (desc || '—') + '</span></div>' +
+          '<div class="popup-row"><span class="popup-label">Reporter</span><span>' + (p.reporter || '—') + '</span></div>' +
+          '<div class="popup-row"><span class="popup-label">Status</span><span class="popup-badge ' + badgeCls + '">' + (p.status || '—') + '</span></div>' +
+          '<div class="popup-row"><span class="popup-label">Reported</span><span>' + fmtDate(p.date) + '</span></div>';
+        L.marker([p.lat, p.lng], { icon: icon }).bindPopup(popup).addTo(pollutionGroup);
+      });
+
+      // Fit bounds
+      var all = wasteGroup.getLayers().concat(pollutionGroup.getLayers());
+      if (all.length > 0) {
+        var fg = L.featureGroup(all);
+        if (fg.getBounds().isValid()) {
+          map.fitBounds(fg.getBounds().pad(0.15));
+        }
+      }
+
+      // Re-invalidate after data render
+      setTimeout(function() { map.invalidateSize(true); }, 100);
+    })
+    .catch(function(err) {
+      console.error('Heatmap error:', err);
+      document.getElementById('loadingChip').innerHTML =
+        '<span class="material-icons-outlined" style="color:red;font-size:16px;">error</span> Failed to load map data — ' + err.message;
+    });
+});
+</script>
+</body>
+</html>

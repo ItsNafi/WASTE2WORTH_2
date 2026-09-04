@@ -20,6 +20,17 @@ const server = http.createServer((req, res) => {
     return app(req, res);
 });
 
-server.listen(PORT, () => {
-    console.log(`🚀 Native Node.js & Express server running on http://localhost:${PORT}`);
-});
+const startServer = (port) => {
+    server.listen(port, () => {
+        console.log(`🚀 Native Node.js & Express server running on http://localhost:${port}`);
+    }).on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.log(`⚠️ Port ${port} is currently in use. Trying port ${port + 1}...`);
+            startServer(port + 1);
+        } else {
+            console.error('Server error:', err);
+        }
+    });
+};
+
+startServer(Number(PORT));

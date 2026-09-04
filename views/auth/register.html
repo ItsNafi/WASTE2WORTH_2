@@ -21,7 +21,7 @@
         <span class="material-icons-outlined" style="font-size: 18px;">error_outline</span>
         <span id="authErrorMessage">Registration failed</span>
       </div>
-      <form id="registerForm">
+      <form id="registerForm" action="/api/auth/register" method="POST">
         <div class="form-group">
           <label class="form-label" for="name">Full Name</label>
           <input type="text" id="name" name="name" class="form-input" placeholder="John Doe" required autocomplete="name">

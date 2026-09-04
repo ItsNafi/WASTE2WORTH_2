@@ -163,8 +163,8 @@ document.addEventListener('DOMContentLoaded', () => {
           ignoreAuthError: true
         });
         
-        showToast(res.message, 'success');
-        if (res.redirect) setTimeout(() => window.location.href = res.redirect, 400);
+        showToast(res.message || 'Login successful', 'success');
+        if (res.redirect) setTimeout(() => window.location.href = res.redirect, 800);
       } catch (err) {
         if (errBox) {
           const msgEl = document.getElementById('authErrorMessage');
@@ -210,8 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
           ignoreAuthError: true
         });
         
-        showToast(res.message, 'success');
-        if (res.redirect) setTimeout(() => window.location.href = res.redirect, 400);
+        showToast(res.message || 'Registration successful', 'success');
+        if (res.redirect) setTimeout(() => window.location.href = res.redirect, 800);
       } catch (err) {
         if (errBox) {
           const msgEl = document.getElementById('authErrorMessage');
@@ -297,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
             notifDropdown.innerHTML = `
               <span class="material-icons-outlined" style="font-size:24px; color: var(--color-text-secondary);">notifications</span>
               <span id="notifBadge" style="display:none; position:absolute; top:-5px; right:-5px; background:var(--color-accent-amber); color:white; font-size:10px; font-weight:bold; padding:2px 5px; border-radius:10px;">0</span>
-              <div id="notifList" style="display:none; position:absolute; top:35px; right:0; width:300px; background:white; box-shadow:var(--shadow-card); border-radius:var(--radius-md); border:1px solid var(--color-border); z-index:100; max-height:300px; overflow-y:auto;">
+              <div id="notifList" style="display:none; position:absolute; top:35px; right:0; width:340px; background:white; box-shadow:var(--shadow-dropdown); border-radius:var(--radius-md); border:1px solid var(--color-border); z-index:100; max-height:420px; overflow-y:auto;">
               </div>
             `;
             if (headerUser) headerUser.insertBefore(notifDropdown, headerUser.firstChild);
@@ -336,12 +336,36 @@ document.addEventListener('DOMContentLoaded', () => {
           if (notifs.length === 0) {
             list.innerHTML = '<div style="padding:15px; text-align:center; color:var(--color-text-muted); font-size:0.9rem;">No notifications</div>';
           } else {
-            list.innerHTML = notifs.map(n => `
-              <div style="padding:12px 15px; border-bottom:1px solid var(--color-border-light); background:${n.isRead ? 'transparent' : 'rgba(var(--color-primary-rgb), 0.05)'};">
-                <div style="font-size:0.9rem; color:var(--color-text-primary); margin-bottom:4px;">${escapeHTML(n.message)}</div>
-                <div style="font-size:0.75rem; color:var(--color-text-muted);">${formatDate(n.createdAt)}</div>
-              </div>
-            `).join('');
+            list.innerHTML = notifs.map(n => {
+              // ── Parse & highlight dollar amounts in the message ──────────
+              const rawMsg    = n.message || '';
+              const formatted = escapeHTML(rawMsg).replace(
+                /\$(\d+(?:\.\d{1,2})?)/g,
+                (_, amt) => `<span style="display:inline-block;background:#e8f5e9;color:#2e7d32;font-weight:700;padding:1px 7px;border-radius:10px;font-size:0.85em;">$${amt}</span>`
+              );
+              // ── Pick icon based on message keywords ──────────────────────
+              const msgLower  = rawMsg.toLowerCase();
+              let notifIcon   = 'notifications';
+              if (msgLower.includes('payment') || msgLower.includes('paid') || msgLower.includes('purchase') || msgLower.includes('sold')) notifIcon = 'payments';
+              else if (msgLower.includes('green point') || msgLower.includes('+15') || msgLower.includes('+10')) notifIcon = 'eco';
+              else if (msgLower.includes('campaign') || msgLower.includes('fund')) notifIcon = 'campaign';
+              else if (msgLower.includes('scrap') || msgLower.includes('waste')) notifIcon = 'recycling';
+              const iconColor = !n.isRead ? 'var(--color-primary)' : 'var(--color-text-muted)';
+              const iconBg    = !n.isRead ? 'var(--color-primary-bg)' : '#f1f5f9';
+              return `
+              <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-bottom:1px solid var(--color-border-light);background:${!n.isRead ? 'rgba(46,125,50,0.04)' : 'transparent'};transition:background 0.2s;">
+                <div style="width:34px;height:34px;border-radius:50%;background:${iconBg};color:${iconColor};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
+                  <span class="material-icons-outlined" style="font-size:17px;">${notifIcon}</span>
+                </div>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:0.85rem;color:var(--color-text-primary);line-height:1.45;word-break:break-word;">${formatted}</div>
+                  <div style="display:flex;align-items:center;gap:6px;margin-top:5px;">
+                    <span style="font-size:0.72rem;color:var(--color-text-muted);">${formatDate(n.createdAt)}</span>
+                    ${!n.isRead ? '<span style="width:6px;height:6px;border-radius:50%;background:var(--color-primary);display:inline-block;"></span>' : ''}
+                  </div>
+                </div>
+              </div>`;
+            }).join('');
           }
         }
       } catch (err) {
@@ -523,7 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const tbody = document.getElementById('citizenPriceDirectory');
       if (!tbody) return;
       try {
-        const prices = await apiCall('/api/scrap/prices');
+        const prices = await apiCall('/api/price-directory');
         tbody.innerHTML = prices.map(p => `
           <tr>
             <td style="font-weight: 600; color: var(--color-primary);">${escapeHTML(p.categoryName)}</td>
@@ -547,18 +571,153 @@ document.addEventListener('DOMContentLoaded', () => {
   
   if (currentPath.includes('/bhangari')) {
     let allBoardListings = [];
-    
-    // Global purchase function attached to window so inline onclick works
-    window.purchaseScrap = async (listingId) => {
-      if(!confirm('Are you sure you want to purchase this scrap material?')) return;
-      
+    let priceMap = {};
+
+    const getCategoryRate = (category) => {
+      if (!category) return 5.00;
+      if (priceMap[category]) return priceMap[category];
+      const matchKey = Object.keys(priceMap).find(k => k.toLowerCase().includes(category.toLowerCase()) || category.toLowerCase().includes(k.toLowerCase()));
+      return matchKey ? priceMap[matchKey] : 5.00;
+    };
+
+    // ── Reusable styled purchase-confirmation modal ──────────────────────────
+    const CATEGORY_ICONS = {
+      Plastic:  'water_drop',
+      Metal:    'hardware',
+      Paper:    'description',
+      Glass:    'local_bar',
+      'E-Waste':'memory',
+      Textile:  'dry_cleaning',
+      Default:  'inventory_2'
+    };
+
+    /**
+     * Shows a polished purchase-confirmation modal.
+     * @param {object} opts
+     *   opts.icon        - Material icon name
+     *   opts.title       - Modal heading
+     *   opts.badge       - Category label shown in a coloured badge
+     *   opts.rows        - Array of { label, value, highlight? } for the breakdown table
+     *   opts.total       - Formatted total string (e.g. "$21.00")
+     *   opts.onConfirm   - Async fn called when user clicks "Confirm & Pay"
+     */
+    const showPurchaseModal = (opts) => {
+      const existing = document.getElementById('w2w-purchase-modal');
+      if (existing) existing.remove();
+
+      const icon  = opts.icon  || 'payment';
+      const rows  = (opts.rows || []).map(r => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--color-border-light);">
+          <span style="font-size:0.85rem;color:var(--color-text-secondary);">${escapeHTML(r.label)}</span>
+          <span style="font-size:0.9rem;font-weight:${r.highlight ? '700' : '500'};color:${r.highlight ? 'var(--color-primary)' : 'var(--color-text-primary)'};">${escapeHTML(String(r.value))}</span>
+        </div>`).join('');
+
+      const overlay = document.createElement('div');
+      overlay.id = 'w2w-purchase-modal';
+      overlay.style.cssText = `
+        position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);
+        z-index:9999;display:flex;align-items:center;justify-content:center;
+        animation:fadeIn 200ms ease;
+      `;
+
+      overlay.innerHTML = `
+        <div style="background:#fff;border-radius:var(--radius-lg);padding:28px 32px;max-width:440px;width:90%;
+                    box-shadow:0 24px 64px rgba(0,0,0,0.22);animation:slideUp 250ms ease;font-family:inherit;">
+
+          <!-- Header -->
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:22px;">
+            <div style="width:48px;height:48px;border-radius:var(--radius-circle);background:var(--color-primary-bg);
+                        color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span class="material-icons-outlined" style="font-size:24px;">${icon}</span>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:1.1rem;color:var(--color-text-primary);line-height:1.2;">${escapeHTML(opts.title || 'Confirm Purchase')}</div>
+              <div style="font-size:0.8rem;color:var(--color-text-secondary);margin-top:2px;">Review transaction details below</div>
+            </div>
+          </div>
+
+          <!-- Category badge -->
+          ${opts.badge ? `
+          <div style="margin-bottom:16px;">
+            <span style="display:inline-flex;align-items:center;gap:6px;background:var(--color-primary-bg);
+                         color:var(--color-primary);font-size:0.8rem;font-weight:600;
+                         padding:4px 12px;border-radius:var(--radius-pill);">
+              <span class="material-icons-outlined" style="font-size:14px;">${icon}</span>
+              ${escapeHTML(opts.badge)}
+            </span>
+          </div>` : ''}
+
+          <!-- Breakdown rows -->
+          <div style="background:var(--color-border-light);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:20px;">
+            ${rows}
+            <!-- Total -->
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;margin-top:4px;">
+              <span style="font-size:0.9rem;font-weight:600;color:var(--color-text-primary);">Total Amount</span>
+              <span style="font-size:1.4rem;font-weight:800;color:var(--color-primary);">${escapeHTML(opts.total || '$0.00')}</span>
+            </div>
+          </div>
+
+          <!-- Green Points incentive -->
+          <p style="font-size:0.82rem;color:var(--color-text-secondary);margin:0 0 20px;display:flex;align-items:center;gap:6px;">
+            <span class="material-icons-outlined" style="font-size:16px;color:#4caf50;">eco</span>
+            This purchase awards you <strong style="color:var(--color-primary);margin:0 3px;">+15 Green Points</strong> and rewards the seller.
+          </p>
+
+          <!-- Actions -->
+          <div style="display:flex;gap:10px;">
+            <button id="w2w-modal-confirm" class="btn btn-primary" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;">
+              <span class="material-icons-outlined" style="font-size:18px;">payment</span> Confirm &amp; Pay
+            </button>
+            <button id="w2w-modal-cancel" class="btn btn-ghost" style="flex:1;">Cancel</button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+
+      // Close handlers
+      document.getElementById('w2w-modal-cancel').addEventListener('click', () => overlay.remove());
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+
+      // Confirm handler — returns a Promise that resolves true/false
+      return new Promise((resolve) => {
+        document.getElementById('w2w-modal-confirm').addEventListener('click', async () => {
+          const confirmBtn = document.getElementById('w2w-modal-confirm');
+          confirmBtn.disabled = true;
+          confirmBtn.innerHTML = '<span class="material-icons-outlined spin">sync</span> Processing...';
+          overlay.remove();
+          resolve(true);
+        });
+        document.getElementById('w2w-modal-cancel').addEventListener('click', () => resolve(false), { once: true });
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) resolve(false); }, { once: true });
+      });
+    };
+    // ────────────────────────────────────────────────────────────────────────
+
+    window.purchaseScrap = async (listingId, category, weight, sellerName) => {
+      const rate     = getCategoryRate(category);
+      const estTotal = (weight * rate).toFixed(2);
+
+      const confirmed = await showPurchaseModal({
+        icon:   CATEGORY_ICONS[category] || CATEGORY_ICONS.Default,
+        title:  'Confirm Scrap Purchase',
+        badge:  category,
+        rows: [
+          { label: 'Seller',          value: sellerName },
+          { label: 'Weight',          value: `${weight} kg` },
+          { label: 'Benchmark Rate',  value: `$${parseFloat(rate).toFixed(2)} / kg` },
+        ],
+        total:  `$${estTotal}`,
+      });
+      if (!confirmed) return;
+
       try {
-        await apiCall(`/api/bhangari/purchase/${listingId}`, { method: 'POST' });
-        showToast('Purchase successful! +15 Green Points', 'success');
+        const res = await apiCall(`/api/bhangari/purchase/${listingId}`, { method: 'POST' });
+        showToast(res.message || 'Purchase successful! +15 Green Points', 'success');
         loadBhangariBoard();
         loadUserInfo();
       } catch (err) {
-        // Handled
+        // Handled by apiCall
       }
     };
 
@@ -567,11 +726,14 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!tbody) return;
       
       if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center" style="padding:40px;color:var(--color-text-muted);">No listings found for this category.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center" style="padding:40px;color:var(--color-text-muted);">No listings found for this category.</td></tr>`;
         return;
       }
       
-      tbody.innerHTML = data.map(item => `
+      tbody.innerHTML = data.map(item => {
+        const rate = getCategoryRate(item.category);
+        const estPrice = (parseFloat(item.weight) * rate).toFixed(2);
+        return `
         <tr class="animate-fade-in">
           <td>
             ${item.photoUrl 
@@ -584,16 +746,17 @@ document.addEventListener('DOMContentLoaded', () => {
           </td>
           <td>${escapeHTML(item.category)}</td>
           <td style="font-weight:600;color:var(--color-primary);">${item.weight} kg</td>
+          <td style="font-weight:700;color:var(--color-primary);">$${estPrice} <span style="font-size:0.75rem;font-weight:normal;color:var(--color-text-muted);">($${rate.toFixed(2)}/kg)</span></td>
           <td><span class="status-pill" data-status="${item.status}">${item.status}</span></td>
           <td style="color:var(--color-text-secondary);">${formatDate(item.createdAt)}</td>
           <td>
             ${item.status === 'Available' 
-              ? `<button class="btn btn-primary btn-sm" onclick="purchaseScrap(${item.listingId})">Buy Now</button>`
+              ? `<button class="btn btn-primary btn-sm" onclick="purchaseScrap(${item.listingId}, '${escapeHTML(item.category).replace(/'/g, "\\'")}', ${item.weight}, '${escapeHTML(item.ownerName).replace(/'/g, "\\'")}')">Buy Now</button>`
               : `<button class="btn btn-ghost btn-sm" disabled>Sold Out</button>`
             }
           </td>
         </tr>
-      `).join('');
+      `}).join('');
     };
 
     const loadBhangariBoard = async () => {
@@ -613,7 +776,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
       } catch (err) {
         const tbody = document.getElementById('bhangariBoard');
-        if(tbody) tbody.innerHTML = `<tr><td colspan="7" class="text-center form-error">Failed to load board data.</td></tr>`;
+        if(tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center form-error">Failed to load board data.</td></tr>`;
       }
     };
 
@@ -634,16 +797,104 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
 
-    window.purchaseVolunteerWaste = async (registrationId, weight) => {
-      const category = prompt('Specify waste category to buy (e.g. Plastic, Metal, Paper, Glass, E-Waste):', 'Plastic');
+    window.purchaseVolunteerWaste = async (registrationId, weight, campaignTitle, volunteerName) => {
+      // Step 1 — category picker inline modal
+      const existing = document.getElementById('w2w-purchase-modal');
+      if (existing) existing.remove();
+
+      const CATEGORIES = ['Plastic', 'Metal', 'Paper', 'Glass', 'E-Waste', 'Textile'];
+
+      const categoryChips = CATEGORIES.map(cat => `
+        <button type="button" class="w2w-cat-chip" data-cat="${cat}"
+          style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:var(--radius-pill);
+                 border:2px solid var(--color-border);background:#fff;cursor:pointer;font-size:0.82rem;
+                 font-weight:500;color:var(--color-text-secondary);transition:all 0.15s;">
+          <span class="material-icons-outlined" style="font-size:14px;">${CATEGORY_ICONS[cat] || 'inventory_2'}</span>${cat}
+        </button>`).join('');
+
+      const pickerOverlay = document.createElement('div');
+      pickerOverlay.id = 'w2w-purchase-modal';
+      pickerOverlay.style.cssText = `
+        position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);
+        z-index:9999;display:flex;align-items:center;justify-content:center;animation:fadeIn 200ms ease;`;
+      pickerOverlay.innerHTML = `
+        <div style="background:#fff;border-radius:var(--radius-lg);padding:28px 32px;max-width:440px;width:90%;
+                    box-shadow:0 24px 64px rgba(0,0,0,0.22);animation:slideUp 250ms ease;font-family:inherit;">
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px;">
+            <div style="width:48px;height:48px;border-radius:var(--radius-circle);background:var(--color-primary-bg);
+                        color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <span class="material-icons-outlined" style="font-size:24px;">recycling</span>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:1.05rem;color:var(--color-text-primary);">Select Waste Category</div>
+              <div style="font-size:0.8rem;color:var(--color-text-secondary);margin-top:2px;">${escapeHTML(campaignTitle || 'Campaign Waste')} — ${weight} kg by ${escapeHTML(volunteerName || 'Volunteer')}</div>
+            </div>
+          </div>
+          <div id="w2w-cat-chips" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px;">${categoryChips}</div>
+          <div style="display:flex;gap:10px;">
+            <button id="w2w-cat-confirm" class="btn btn-primary" style="flex:1;" disabled>
+              <span class="material-icons-outlined" style="font-size:18px;">arrow_forward</span> Next
+            </button>
+            <button id="w2w-cat-cancel" class="btn btn-ghost" style="flex:1;">Cancel</button>
+          </div>
+        </div>`;
+      document.body.appendChild(pickerOverlay);
+
+      // Chip toggle
+      let selectedCategory = null;
+      pickerOverlay.querySelectorAll('.w2w-cat-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          pickerOverlay.querySelectorAll('.w2w-cat-chip').forEach(c => {
+            c.style.borderColor   = 'var(--color-border)';
+            c.style.background    = '#fff';
+            c.style.color         = 'var(--color-text-secondary)';
+          });
+          chip.style.borderColor = 'var(--color-primary)';
+          chip.style.background  = 'var(--color-primary-bg)';
+          chip.style.color       = 'var(--color-primary)';
+          selectedCategory = chip.dataset.cat;
+          document.getElementById('w2w-cat-confirm').disabled = false;
+        });
+      });
+
+      document.getElementById('w2w-cat-cancel').addEventListener('click', () => pickerOverlay.remove());
+      pickerOverlay.addEventListener('click', (e) => { if (e.target === pickerOverlay) pickerOverlay.remove(); });
+
+      // Wait for category selection
+      const category = await new Promise((resolve) => {
+        document.getElementById('w2w-cat-confirm').addEventListener('click', () => {
+          pickerOverlay.remove();
+          resolve(selectedCategory);
+        });
+        document.getElementById('w2w-cat-cancel').addEventListener('click', () => resolve(null), { once: true });
+        pickerOverlay.addEventListener('click', (e) => { if (e.target === pickerOverlay) resolve(null); }, { once: true });
+      });
       if (!category) return;
-      
+
+      // Step 2 — confirmation modal
+      const rate     = getCategoryRate(category);
+      const estTotal = (weight * rate).toFixed(2);
+
+      const confirmed = await showPurchaseModal({
+        icon:  CATEGORY_ICONS[category] || CATEGORY_ICONS.Default,
+        title: 'Confirm Campaign Waste Purchase',
+        badge: `${category} — Campaign Waste`,
+        rows: [
+          { label: 'Campaign',         value: campaignTitle || '—' },
+          { label: 'Volunteer',        value: volunteerName  || '—' },
+          { label: 'Waste Weight',     value: `${weight} kg` },
+          { label: 'Benchmark Rate',   value: `$${parseFloat(rate).toFixed(2)} / kg` },
+        ],
+        total: `$${estTotal}`,
+      });
+      if (!confirmed) return;
+
       try {
-        await apiCall(`/api/payments/purchase-campaign-waste/${registrationId}`, {
+        const res = await apiCall(`/api/payments/purchase-campaign-waste/${registrationId}`, {
           method: 'POST',
           body: JSON.stringify({ category })
         });
-        showToast('Purchase successful! Funds routed to campaign fund.', 'success');
+        showToast(res.message || 'Purchase successful! Funds routed to campaign fund.', 'success');
         loadVolunteerWaste();
         loadCampaignFundBalance();
         loadUserInfo();
@@ -679,7 +930,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <td style="font-weight:600;color:var(--color-primary);">${item.wasteCollectedKg} kg</td>
             <td><span class="status-pill" data-status="Available">Available</span></td>
             <td>
-              <button class="btn btn-primary btn-sm" onclick="purchaseVolunteerWaste(${item.registrationId}, ${item.wasteCollectedKg})">Buy Waste</button>
+              <button class="btn btn-primary btn-sm" onclick="purchaseVolunteerWaste(${item.registrationId}, ${item.wasteCollectedKg}, '${escapeHTML(item.campaignTitle).replace(/'/g, "\\'")}', '${escapeHTML(item.volunteerName).replace(/'/g, "\\'")}')">Buy Waste</button>
             </td>
           </tr>
         `).join('');
@@ -690,25 +941,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loadBhangariPriceDirectory = async () => {
       const tbody = document.getElementById('bhangariPriceDirectory');
-      if (!tbody) return;
       try {
-        const prices = await apiCall('/api/scrap/prices');
-        tbody.innerHTML = prices.map(p => `
-          <tr>
-            <td style="font-weight: 600; color: var(--color-primary);">${escapeHTML(p.categoryName)}</td>
-            <td style="font-weight: 500;">$${parseFloat(p.pricePerKg).toFixed(2)} / kg</td>
-          </tr>
-        `).join('');
+        const prices = await apiCall('/api/price-directory');
+        priceMap = {};
+        prices.forEach(p => {
+          priceMap[p.categoryName] = parseFloat(p.pricePerKg);
+          if (p.displayCategory) priceMap[p.displayCategory] = parseFloat(p.pricePerKg);
+        });
+        if (tbody) {
+          tbody.innerHTML = prices.map(p => `
+            <tr>
+              <td style="font-weight: 600; color: var(--color-primary);">${escapeHTML(p.categoryName)}</td>
+              <td style="font-weight: 500;">$${parseFloat(p.pricePerKg).toFixed(2)} / kg</td>
+            </tr>
+          `).join('');
+        }
+        // Re-render board with updated prices if already loaded
+        if (allBoardListings.length > 0) filterBoard(document.querySelector('.chip.active')?.dataset.cat || 'All');
       } catch (err) {
-        tbody.innerHTML = `<tr><td colspan="2" class="text-center form-error">Failed to load price directory.</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="2" class="text-center form-error">Failed to load price directory.</td></tr>`;
       }
     };
 
     loadUserInfo();
-    loadBhangariBoard();
+    loadBhangariPriceDirectory().then(() => {
+      loadBhangariBoard();
+    });
     loadVolunteerWaste();
     loadCampaignFundBalance();
-    loadBhangariPriceDirectory();
   }
 
   // ============================================================
@@ -1481,6 +1741,11 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="product-card-desc">Zone: ${escapeHTML(c.boundaryZone)}</div>
               <div class="product-card-meta">
                 <div>Volunteers: ${c.currentVolunteers}/${c.participantCap}</div>
+              </div>
+              <div style="margin-top:14px;">
+                <a href="/dashboard/admin/campaign-qr?campaignId=${c.campaignId}" class="btn btn-primary-gradient btn-block btn-sm" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:8px 12px;font-size:13px;border-radius:6px;">
+                  <span class="material-icons-outlined" style="font-size:16px;">qr_code_2</span> Generate QR Code
+                </a>
               </div>
             </div>
           </div>

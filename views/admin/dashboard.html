@@ -15,6 +15,18 @@
         <span class="material-icons-outlined">eco</span> WASTE2WORTH
       </div>
       <nav class="sidebar-nav">
+        <a href="/dashboard/admin" class="nav-item active">
+          <span class="material-icons-outlined">admin_panel_settings</span> Dashboard
+        </a>
+        <a href="/dashboard/admin/impact" class="nav-item">
+          <span class="material-icons-outlined">trending_up</span> Impact Dashboard
+        </a>
+        <a href="/dashboard/admin/campaigns" class="nav-item">
+          <span class="material-icons-outlined">event</span> Campaigns
+        </a>
+        <a href="/dashboard/admin/campaign-qr" class="nav-item">
+          <span class="material-icons-outlined">qr_code_2</span> Generate QR Code
+        </a>
         <a href="/dashboard/admin/waste-portal" class="nav-item">
           <span class="material-icons-outlined">recycling</span> Waste Portal
         </a>
@@ -30,6 +42,10 @@
         <a href="/dashboard/admin/volunteers" class="nav-item">
           <span class="material-icons-outlined">volunteer_activism</span> Volunteers
         </a>
+        <a href="/dashboard/admin/heatmap" class="nav-item">
+          <span class="material-icons-outlined">map</span> Waste Heat Map
+        </a>
+
         <a href="/logout" id="logoutBtn" class="nav-item">
           <span class="material-icons-outlined">logout</span> Logout
         </a>
@@ -83,32 +99,17 @@
             </div>
           </div>
 
-          <!-- Create Campaign Form -->
-          <div class="card">
-            <div class="card-header">
-              <h2 class="card-title">Launch New Campaign</h2>
+          <!-- Quick Actions -->
+          <div class="card" style="display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding: 40px 20px;">
+            <div class="card-header" style="border-bottom:none; margin-bottom: 8px; padding-bottom: 0;">
+              <h2 class="card-title">Campaign Management</h2>
             </div>
-            <form id="adminCampaignForm">
-              <div class="form-group">
-                <label class="form-label">Title</label>
-                <input type="text" id="campaignTitle" class="form-input" required>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label class="form-label">Date</label>
-                  <input type="date" id="campaignDate" class="form-input" required>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">Max Volunteers</label>
-                  <input type="number" id="campaignCap" class="form-input" value="50" required>
-                </div>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Boundary Zone (Location)</label>
-                <input type="text" id="campaignZone" class="form-input" required>
-              </div>
-              <button type="submit" class="btn btn-primary-gradient btn-block">Launch Campaign</button>
-            </form>
+            <p style="color:var(--color-text-secondary); font-size:14px; margin-bottom: 24px;">
+              Manage active drives or launch new environmental initiatives from the dedicated campaigns portal.
+            </p>
+            <a href="/dashboard/admin/campaigns" class="btn btn-primary-gradient" style="text-decoration:none; padding:12px 24px; display:inline-flex; align-items:center; gap:8px;">
+              <span class="material-icons-outlined">add_circle</span> Launch New Campaign
+            </a>
           </div>
 
         </div>
@@ -150,6 +151,13 @@
     </div>
   </div>
   <script src="/js/app.js" defer></script>
+  <script>
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const appLayout = document.querySelector('.app-layout');
+    if (sidebarToggle && appLayout) {
+      sidebarToggle.addEventListener('click', () => appLayout.classList.toggle('sidebar-collapsed'));
+    }
+  </script>
 </body>
 </html>
 

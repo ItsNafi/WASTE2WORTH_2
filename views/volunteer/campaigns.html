@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Volunteer Campaigns — WASTE2WORTH</title>
+  <meta name="description" content="Find and register for upcoming cleanup campaigns in your area.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+<div class="app-layout">
+  
+  <!-- ── Volunteer Sidebar ────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="material-icons-outlined">eco</span> WASTE2WORTH
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/volunteer/profile" class="nav-item">
+        <span class="material-icons-outlined">account_circle</span> Volunteer Profile
+      </a>
+      <a href="/volunteer/register" class="nav-item">
+        <span class="material-icons-outlined">how_to_reg</span> Register / Update
+      </a>
+      <a href="/volunteer/campaigns" class="nav-item active">
+        <span class="material-icons-outlined">event</span> Campaigns
+      </a>
+      <a href="/volunteer/achievements" class="nav-item">
+        <span class="material-icons-outlined">emoji_events</span> Achievements & Badges
+      </a>
+      <a href="/volunteer/scan" class="nav-item">
+        <span class="material-icons-outlined">qr_code_scanner</span> Scan QR Code
+      </a>
+              <a href="/volunteer/certificates" class="nav-item">
+          <span class="material-icons-outlined">workspace_premium</span> Certificates
+        </a>
+<a href="/logout" id="logoutBtn" class="nav-item">
+        <span class="material-icons-outlined">logout</span> Logout
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div style="font-size:12px;color:rgba(255,255,255,0.5);text-align:center;">&copy; 2026 WASTE2WORTH</div>
+    </div>
+  </aside>
+
+  <div class="main-wrapper">
+    
+    <!-- ── Header ─────────────────────────────────────── -->
+    <header class="header">
+      <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle Navigation">
+        <span class="material-icons-outlined">menu</span>
+      </button>
+      <div class="header-search">
+        <span class="material-icons-outlined">search</span>
+        <input type="text" placeholder="Search campaigns..." aria-label="Search">
+      </div>
+      <div class="header-user">
+        <div class="green-points-badge">
+          <span class="material-icons-outlined" style="font-size:16px;">stars</span>
+          <span class="green-points-value">0</span>
+        </div>
+        <div class="user-info">
+          <span class="user-name">Volunteer</span>
+          <span class="user-role">Volunteer</span>
+        </div>
+        <div class="user-avatar">V</div>
+      </div>
+    </header>
+
+    <!-- ── Main Content ─────────────────────────────────── -->
+    <main class="main-content">
+      <div class="page-header animate-fade-in">
+        <h1 class="page-title">Upcoming Cleanup Campaigns</h1>
+        <p class="page-subtitle">Participate in community environmental campaigns, register your attendance, and earn Green Points.</p>
+      </div>
+
+      <div class="card animate-slide-up">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+          <h2 class="card-title">Available Campaigns</h2>
+          <a href="/volunteer/scan" class="btn btn-primary-gradient btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;">
+            <span class="material-icons-outlined" style="font-size:16px;">qr_code_scanner</span> Scan Attendance QR
+          </a>
+        </div>
+        <div style="padding:var(--space-md);">
+          <div class="product-grid" id="campaignsFeed">
+            <div class="loading-spinner" style="grid-column:1/-1;"><div class="spinner"></div></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="/js/app.js" defer></script>
+<script>
+  // Sidebar toggle
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const appLayout = document.querySelector('.app-layout');
+  if (sidebarToggle && appLayout) {
+    sidebarToggle.addEventListener('click', () => appLayout.classList.toggle('sidebar-collapsed'));
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Impact Dashboard — Admin — WASTE2WORTH</title>
+  <meta name="description" content="Admin Impact Dashboard — track campaign outcomes, volunteer contributions, and environmental metrics.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .impact-stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 28px;
+    }
+    @media(max-width: 900px) { .impact-stat-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media(max-width: 540px) { .impact-stat-grid { grid-template-columns: 1fr; } }
+
+    .impact-stat-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px 20px;
+      box-shadow: var(--shadow-card, 0 2px 12px rgba(0,0,0,0.07));
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      animation: slideUp 0.4s ease both;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .impact-stat-card:hover { transform: translateY(-3px); box-shadow: 0 6px 24px rgba(0,0,0,0.12); }
+    .impact-stat-card:nth-child(2) { animation-delay: 0.07s; }
+    .impact-stat-card:nth-child(3) { animation-delay: 0.14s; }
+    .impact-stat-card:nth-child(4) { animation-delay: 0.21s; }
+
+    @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+    .impact-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .impact-icon .material-icons-outlined { font-size: 28px; }
+    .impact-icon.green  { background: #e8f5e9; color: #2e7d32; }
+    .impact-icon.blue   { background: #e3f2fd; color: #1565c0; }
+    .impact-icon.amber  { background: #fff8e1; color: #f57f17; }
+    .impact-icon.purple { background: #f3e5f5; color: #7b1fa2; }
+
+    .impact-stat-info .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--color-text-primary, #1b5e20);
+      line-height: 1;
+    }
+    .impact-stat-info .stat-label {
+      font-size: 0.8rem;
+      color: var(--color-text-secondary, #666);
+      margin-top: 4px;
+      font-weight: 500;
+    }
+
+    .impact-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    @media(max-width: 800px) { .impact-grid-2 { grid-template-columns: 1fr; } }
+
+    .impact-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: var(--shadow-card, 0 2px 12px rgba(0,0,0,0.07));
+    }
+    .impact-card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid #f0f0f0;
+      padding-bottom: 14px;
+    }
+    .impact-card-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-text-primary, #1b5e20);
+      margin: 0;
+    }
+    .impact-card-header .material-icons-outlined {
+      color: #2e7d32;
+      font-size: 22px;
+    }
+
+    .impact-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .impact-table th {
+      text-align: left;
+      padding: 8px 10px;
+      color: #888;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .impact-table td {
+      padding: 10px 10px;
+      border-bottom: 1px solid #f9f9f9;
+      color: var(--color-text-primary, #333);
+      vertical-align: middle;
+    }
+    .impact-table tr:last-child td { border-bottom: none; }
+    .impact-table tr:hover td { background: #f9fbe7; }
+
+    .badge-pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-active   { background: #e8f5e9; color: #2e7d32; }
+    .badge-upcoming { background: #e3f2fd; color: #1565c0; }
+    .badge-done     { background: #f5f5f5; color: #777; }
+
+    .progress-bar-wrap {
+      background: #f0f0f0;
+      border-radius: 20px;
+      height: 8px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 20px;
+      background: linear-gradient(90deg, #43a047, #1b5e20);
+      transition: width 0.8s ease;
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .metric-row:last-child { border-bottom: none; }
+    .metric-label { font-size: 13px; color: #555; }
+    .metric-value { font-size: 15px; font-weight: 700; color: #1b5e20; }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: #aaa;
+      font-size: 13px;
+    }
+    .empty-state .material-icons-outlined { font-size: 40px; margin-bottom: 8px; display: block; }
+  </style>
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="material-icons-outlined">eco</span> WASTE2WORTH
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/dashboard/admin" class="nav-item">
+          <span class="material-icons-outlined">admin_panel_settings</span> Dashboard
+        </a>
+        <a href="/dashboard/admin/impact" class="nav-item active">
+          <span class="material-icons-outlined">trending_up</span> Impact Dashboard
+        </a>
+        <a href="/dashboard/admin/campaigns" class="nav-item">
+          <span class="material-icons-outlined">event</span> Campaigns
+        </a>
+        <a href="/dashboard/admin/campaign-qr" class="nav-item">
+          <span class="material-icons-outlined">qr_code_2</span> Generate QR Code
+        </a>
+        <a href="/dashboard/admin/waste-portal" class="nav-item">
+          <span class="material-icons-outlined">recycling</span> Waste Portal
+        </a>
+        <a href="/dashboard/admin/product-story" class="nav-item">
+          <span class="material-icons-outlined">menu_book</span> Product Stories
+        </a>
+        <a href="/dashboard/admin/achievements" class="nav-item">
+          <span class="material-icons-outlined">emoji_events</span> Achievements & Badges
+        </a>
+        <a href="/dashboard/admin/price-directory" class="nav-item">
+          <span class="material-icons-outlined">sell</span> Price Directory
+        </a>
+        <a href="/dashboard/admin/volunteers" class="nav-item">
+          <span class="material-icons-outlined">volunteer_activism</span> Volunteers
+        </a>
+        <a href="/dashboard/admin/heatmap" class="nav-item">
+          <span class="material-icons-outlined">map</span> Waste Heat Map
+        </a>
+
+        <a href="/logout" id="logoutBtn" class="nav-item">
+          <span class="material-icons-outlined">logout</span> Logout
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div style="font-size: 12px; color: rgba(255,255,255,0.5); text-align: center;">&copy; 2026 Admin Portal</div>
+      </div>
+    </aside>
+
+    <div class="main-wrapper">
+      <header class="header">
+        <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle Navigation">
+          <span class="material-icons-outlined">menu</span>
+        </button>
+        <div class="header-search">
+          <span class="material-icons-outlined">trending_up</span>
+          <input type="text" placeholder="Impact Dashboard" aria-label="Page title" readonly style="cursor:default;">
+        </div>
+        <div class="header-user" id="headerUser">
+          <div class="user-info">
+            <span class="user-name">Admin</span>
+            <span class="user-role">Admin</span>
+          </div>
+          <div class="user-avatar">A</div>
+        </div>
+      </header>
+
+      <main class="main-content">
+        <div class="page-header animate-fade-in">
+          <h1 class="page-title">Impact Dashboard</h1>
+          <p class="page-subtitle">A real-time overview of campaign outcomes, volunteer contributions, and environmental progress.</p>
+        </div>
+
+        <!-- KPI Stats Row -->
+        <div class="impact-stat-grid">
+          <div class="impact-stat-card">
+            <div class="impact-icon green">
+              <span class="material-icons-outlined">campaign</span>
+            </div>
+            <div class="impact-stat-info">
+              <div class="stat-value" id="kpiCampaigns">—</div>
+              <div class="stat-label">Total Campaigns</div>
+            </div>
+          </div>
+          <div class="impact-stat-card">
+            <div class="impact-icon blue">
+              <span class="material-icons-outlined">group</span>
+            </div>
+            <div class="impact-stat-info">
+              <div class="stat-value" id="kpiVolunteers">—</div>
+              <div class="stat-label">Total Volunteers</div>
+            </div>
+          </div>
+          <div class="impact-stat-card">
+            <div class="impact-icon amber">
+              <span class="material-icons-outlined">delete_sweep</span>
+            </div>
+            <div class="impact-stat-info">
+              <div class="stat-value" id="kpiWaste">—</div>
+              <div class="stat-label">Waste Collected (kg)</div>
+            </div>
+          </div>
+          <div class="impact-stat-card">
+            <div class="impact-icon purple">
+              <span class="material-icons-outlined">stars</span>
+            </div>
+            <div class="impact-stat-info">
+              <div class="stat-value" id="kpiPoints">—</div>
+              <div class="stat-label">Green Points Awarded</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Middle Row: Campaigns + Quick Metrics -->
+        <div class="impact-grid-2">
+
+          <!-- Recent Campaigns -->
+          <div class="impact-card">
+            <div class="impact-card-header">
+              <span class="material-icons-outlined">event_note</span>
+              <h3>Recent Campaigns</h3>
+            </div>
+            <table class="impact-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Date</th>
+                  <th>Volunteers</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="recentCampaignsTbody">
+                <tr><td colspan="4" class="empty-state"><div class="spinner"></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Environmental Metrics -->
+          <div class="impact-card">
+            <div class="impact-card-header">
+              <span class="material-icons-outlined">eco</span>
+              <h3>Environmental Metrics</h3>
+            </div>
+            <div id="envMetrics">
+              <div class="metric-row">
+                <span class="metric-label">Campaigns Completed</span>
+                <span class="metric-value" id="metCompleted">—</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-label">Campaigns Active</span>
+                <span class="metric-value" id="metActive">—</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-label">Campaigns Upcoming</span>
+                <span class="metric-value" id="metUpcoming">—</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-label">Total Attendance Records</span>
+                <span class="metric-value" id="metAttendance">—</span>
+              </div>
+              <div class="metric-row">
+                <span class="metric-label">Avg Volunteers / Campaign</span>
+                <span class="metric-value" id="metAvgVol">—</span>
+              </div>
+
+              <div style="margin-top: 18px;">
+                <div style="font-size:12px; color:#888; font-weight:600; margin-bottom:6px;">CAMPAIGN FILL RATE</div>
+                <div id="fillRateLabel" style="font-size:13px; color:#555; margin-bottom:4px;">Loading…</div>
+                <div class="progress-bar-wrap">
+                  <div class="progress-bar-fill" id="fillRateBar" style="width:0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Volunteers Table -->
+        <div class="impact-card" style="margin-bottom: 24px;">
+          <div class="impact-card-header">
+            <span class="material-icons-outlined">leaderboard</span>
+            <h3>Top Volunteers by Green Points</h3>
+          </div>
+          <table class="impact-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Volunteer</th>
+                <th>Email</th>
+                <th>Green Points</th>
+                <th>Campaigns Attended</th>
+              </tr>
+            </thead>
+            <tbody id="topVolunteersTbody">
+              <tr><td colspan="5" class="empty-state"><div class="spinner"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <script>
+    // Sidebar toggle
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    const appLayout = document.querySelector('.app-layout');
+    if (sidebarToggle && appLayout) {
+      sidebarToggle.addEventListener('click', () => appLayout.classList.toggle('sidebar-collapsed'));
+    }
+
+    // Load user info
+    async function loadUserInfo() {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (!res.ok) return;
+        const u = await res.json();
+        if (u.name) {
+          document.querySelectorAll('.user-name').forEach(el => el.textContent = u.name);
+          document.querySelectorAll('.user-avatar').forEach(el => el.textContent = u.name.charAt(0).toUpperCase());
+        }
+        if (u.role) document.querySelectorAll('.user-role').forEach(el => el.textContent = u.role);
+      } catch (_) {}
+    }
+
+    /**
+     * Load KPI stat cards + Environmental Metrics panel.
+     * Uses the dedicated /api/admin/impact-stats endpoint which aggregates
+     * all values server-side with proper date-based status computation.
+     */
+    async function loadImpactStats() {
+      try {
+        const res = await fetch('/api/admin/impact-stats', { credentials: 'include' });
+        if (!res.ok) throw new Error('Failed to fetch impact stats');
+        const s = await res.json();
+
+        // KPI cards
+        document.getElementById('kpiCampaigns').textContent  = (s.totalCampaigns  || 0).toLocaleString();
+        document.getElementById('kpiVolunteers').textContent = (s.totalVolunteerSlotsFilled || 0).toLocaleString();
+        document.getElementById('kpiWaste').textContent      = s.totalWasteKg > 0 ? parseFloat(s.totalWasteKg).toFixed(1) : '0';
+        document.getElementById('kpiPoints').textContent     = (s.totalPointsAwarded || 0).toLocaleString();
+
+        // Environmental Metrics
+        document.getElementById('metCompleted').textContent  = s.completedCampaigns  || 0;
+        document.getElementById('metActive').textContent     = s.activeCampaigns     || 0;
+        document.getElementById('metUpcoming').textContent   = s.upcomingCampaigns   || 0;
+        document.getElementById('metAttendance').textContent = s.totalAttendance     || 0;
+
+        const totalFilled = parseInt(s.totalVolunteerSlotsFilled) || 0;
+        const totalCap    = parseInt(s.totalParticipantCap) || 0;
+        const avg = s.totalCampaigns > 0 ? (totalFilled / s.totalCampaigns).toFixed(1) : '0';
+        document.getElementById('metAvgVol').textContent = avg;
+
+        // Campaign fill rate progress bar
+        const fillRate = totalCap > 0 ? Math.min(100, Math.round((totalFilled / totalCap) * 100)) : 0;
+        document.getElementById('fillRateLabel').textContent =
+          `${totalFilled.toLocaleString()} of ${totalCap.toLocaleString()} volunteer slots filled (${fillRate}%)`;
+        document.getElementById('fillRateBar').style.width = fillRate + '%';
+      } catch (err) {
+        console.error('loadImpactStats error:', err);
+        ['kpiCampaigns','kpiVolunteers','kpiWaste','kpiPoints',
+         'metCompleted','metActive','metUpcoming','metAttendance','metAvgVol'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.textContent = 'Err';
+        });
+        const label = document.getElementById('fillRateLabel');
+        if (label) label.textContent = 'Could not load metrics.';
+      }
+    }
+
+    /**
+     * Load the Recent Campaigns table using /api/campaigns
+     * which now returns dynamically-computed statuses from the server.
+     */
+    async function loadRecentCampaigns() {
+      const tbody = document.getElementById('recentCampaignsTbody');
+      try {
+        const res = await fetch('/api/campaigns', { credentials: 'include' });
+        if (!res.ok) throw new Error();
+        const campaigns = await res.json();
+
+        // Sort by date desc, take latest 6
+        const recent = [...campaigns].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
+
+        if (recent.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="empty-state"><span class="material-icons-outlined">campaign</span>No campaigns found.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = recent.map(c => {
+          const statusClass = c.status === 'Active' ? 'badge-active'
+                            : c.status === 'Upcoming' ? 'badge-upcoming'
+                            : 'badge-done';
+          const dateStr = c.date
+            ? new Date(c.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+            : '—';
+          return `<tr>
+            <td style="font-weight:600;">${c.title || '—'}</td>
+            <td>${dateStr}</td>
+            <td>${c.currentVolunteers || 0} / ${c.participantCap || '—'}</td>
+            <td><span class="badge-pill ${statusClass}">${c.status || '—'}</span></td>
+          </tr>`;
+        }).join('');
+      } catch (err) {
+        console.error('loadRecentCampaigns error:', err);
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Failed to load campaign data.</td></tr>';
+      }
+    }
+
+    /**
+     * Load Top Volunteers leaderboard using /api/admin/top-volunteers.
+     * Returns rows with: volunteerName, email, greenPoints, campaignsAttended.
+     */
+    async function loadTopVolunteers() {
+      const tbody = document.getElementById('topVolunteersTbody');
+      try {
+        const res = await fetch('/api/admin/top-volunteers', { credentials: 'include' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const volunteers = await res.json();
+
+        if (!Array.isArray(volunteers) || volunteers.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" class="empty-state"><span class="material-icons-outlined">group</span>No volunteers found.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = volunteers.map((v, i) => `
+          <tr>
+            <td style="font-weight:700; color:#2e7d32;">${i + 1}</td>
+            <td style="font-weight:600;">${v.volunteerName || '—'}</td>
+            <td style="color:#888;">${v.email || '—'}</td>
+            <td style="font-weight:700; color:#1b5e20;">${(v.greenPoints || 0).toLocaleString()} pts</td>
+            <td>${v.campaignsAttended || 0}</td>
+          </tr>`).join('');
+      } catch (err) {
+        console.error('loadTopVolunteers error:', err);
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Could not load volunteer data.</td></tr>';
+      }
+    }
+
+    loadUserInfo();
+    loadImpactStats();
+    loadRecentCampaigns();
+    loadTopVolunteers();
+  </script>
+</body>
+</html>

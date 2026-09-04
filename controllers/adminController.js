@@ -52,6 +52,52 @@ const AdminController = {
     } catch(err) {
       res.status(500).json({ error: 'Payment failed' });
     }
+  },
+
+  /**
+   * GET /api/admin/impact-stats
+   * Returns aggregated KPIs for the Impact Dashboard.
+   */
+  async getImpactStats(req, res) {
+    try {
+      const stats = await CampaignModel.getImpactStats();
+      res.json(stats);
+    } catch (err) {
+      console.error('getImpactStats error:', err);
+      res.status(500).json({ error: 'Failed to load impact stats.' });
+    }
+  },
+
+  /**
+   * GET /api/admin/top-volunteers
+   * Returns top 10 volunteers ranked by greenPoints from Users table,
+   * joined with campaign attendance count.
+   */
+  async getTopVolunteers(req, res) {
+    try {
+      const db = require('../config/db');
+      const [rows] = await db.execute(`
+        SELECT
+          u.id,
+          u.name         AS volunteerName,
+          u.email,
+          u.greenPoints,
+          COALESCE(att.campaignsAttended, 0) AS campaignsAttended
+        FROM Users u
+        LEFT JOIN (
+          SELECT volunteer_id, COUNT(*) AS campaignsAttended
+          FROM campaign_attendance
+          GROUP BY volunteer_id
+        ) att ON att.volunteer_id = u.id
+        WHERE u.role = 'Volunteer'
+        ORDER BY u.greenPoints DESC
+        LIMIT 10
+      `);
+      res.json(rows);
+    } catch (err) {
+      console.error('getTopVolunteers error:', err);
+      res.status(500).json({ error: 'Failed to load top volunteers.' });
+    }
   }
 };
 

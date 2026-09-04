@@ -23,10 +23,13 @@ const badgeRoutes        = require('./routes/badgeRoutes');
 const priceDirectoryRoutes = require('./routes/priceDirectoryRoutes');
 const medalRoutes          = require('./routes/medalRoutes');
 const adminActivityRoutes  = require('./routes/adminActivityRoutes');
+const heatmapRoutes        = require('./routes/heatmapRoutes');
 const PriceDirectoryController = require('./controllers/priceDirectoryController');
 const VolunteerModel = require('./models/volunteerModel');
+const AuthController = require('./controllers/authController');
 
 const { verifyToken } = require('./middleware/authMiddleware');
+const { requireRole } = require('./middleware/roleMiddleware');
 
 const app = express();
 
@@ -52,20 +55,29 @@ const jwt = require('jsonwebtoken');
 
 /* ── Role Guards & Authenticated Redirects ───────────────────────────────── */
 const getDashboardRoute = async (user) => {
-  if (!user || !user.role) return '/storefront';
-  const r = user.role.toString().trim().toLowerCase();
-  if (r === 'citizen') return '/dashboard/citizen';
-  if (r === 'volunteer') {
-    if (user.id) {
-      const profile = await VolunteerModel.findByUserId(user.id);
-      return profile ? '/volunteer/profile' : '/volunteer/register';
+  try {
+    if (!user || !user.role) return '/storefront';
+    const r = user.role.toString().trim().toLowerCase();
+    if (r === 'citizen') return '/dashboard/citizen';
+    if (r === 'volunteer') {
+      if (user.id) {
+        try {
+          const profile = await VolunteerModel.findByUserId(user.id);
+          return profile ? '/volunteer/profile' : '/volunteer/register';
+        } catch (e) {
+          return '/volunteer/register';
+        }
+      }
+      return '/volunteer/register';
     }
-    return '/volunteer/register';
+    if (r === 'bhangarishop' || r === 'bhangari') return '/dashboard/bhangari';
+    if (r === 'creator') return '/dashboard/creator';
+    if (r === 'admin') return '/dashboard/admin';
+    return '/storefront';
+  } catch (err) {
+    console.error('getDashboardRoute error:', err);
+    return '/dashboard/citizen';
   }
-  if (r === 'bhangarishop' || r === 'bhangari') return '/dashboard/bhangari';
-  if (r === 'creator') return '/dashboard/creator';
-  if (r === 'admin') return '/dashboard/admin/waste-portal';
-  return '/storefront';
 };
 
 const redirectIfAuthenticated = async (req, res, next) => {
@@ -78,7 +90,9 @@ const redirectIfAuthenticated = async (req, res, next) => {
         return res.redirect(route);
       }
     } catch (err) {
-      res.clearCookie('token', { path: '/' });
+      if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+        res.clearCookie('token', { path: '/' });
+      }
     }
   }
   next();
@@ -92,7 +106,9 @@ const requirePageRole = (role) => (req, res, next) => {
 /* ── Page Routes (HTML Views) ────────────────────────────────────────────── */
 app.get('/', redirectIfAuthenticated, (req, res) => res.redirect('/login'));
 app.get('/login', redirectIfAuthenticated, serveView('auth/login.html'));
+app.post('/login', AuthController.login);
 app.get('/register', redirectIfAuthenticated, serveView('auth/register.html'));
+app.post('/register', AuthController.register);
 app.get('/logout', (req, res) => {
   res.clearCookie('token', { path: '/' });
   res.redirect('/login');
@@ -117,9 +133,10 @@ app.get('/dashboard/volunteer', verifyToken, async (req, res) => {
 app.get('/dashboard/volunteer/waste-portal', verifyToken, requirePageRole('Admin'), (req, res) => res.redirect('/dashboard/admin/waste-portal'));
 app.get('/dashboard/volunteer/product-story', verifyToken, requirePageRole('Admin'), (req, res) => res.redirect('/dashboard/admin/product-story'));
 app.get('/dashboard/volunteer/achievements',   verifyToken, (req, res) => res.redirect('/volunteer/achievements'));
-app.get('/dashboard/volunteer/campaigns',      verifyToken, requirePageRole('Admin'), (req, res) => res.redirect('/dashboard/admin/campaigns'));
+app.get('/dashboard/volunteer/scan',           verifyToken, (req, res) => res.redirect('/volunteer/scan'));
+app.get('/dashboard/volunteer/campaigns',      verifyToken, (req, res) => res.redirect('/volunteer/campaigns'));
 
-app.get('/dashboard/admin', verifyToken, requirePageRole('Admin'), (req, res) => res.redirect('/dashboard/admin/waste-portal'));
+app.get('/dashboard/admin', verifyToken, requirePageRole('Admin'), serveView('admin/dashboard.html'));
 app.get('/dashboard/admin/waste-portal',   verifyToken, requirePageRole('Admin'), serveView('admin/wastePortal.html'));
 app.get('/dashboard/admin/product-story',  verifyToken, requirePageRole('Admin'), serveView('admin/productStory.html'));
 app.get('/dashboard/admin/achievements',   verifyToken, requirePageRole('Admin'), serveView('admin/achievements.html'));
@@ -127,11 +144,19 @@ app.get('/dashboard/admin/campaigns',      verifyToken, requirePageRole('Admin')
 app.get('/dashboard/admin/volunteers', verifyToken, requirePageRole('Admin'), serveView('admin/volunteers.html'));
 app.get('/dashboard/admin/campaign-qr', verifyToken, requirePageRole('Admin'), serveView('admin/campaign-qr.html'));
 app.get('/dashboard/admin/price-directory', verifyToken, requirePageRole('Admin'), serveView('admin/priceDirectory.html'));
+app.get('/dashboard/admin/impact',          verifyToken, requirePageRole('Admin'), serveView('admin/impact.html'));
+app.get('/dashboard/admin/heatmap',         verifyToken, requirePageRole('Admin'), serveView('admin/heatmap.html'));
+
+/* ── Citizen Heatmap Route ─────────────────────────────────────── */
+app.get('/citizen/heatmap', verifyToken, requirePageRole('Citizen'), serveView('citizen/heatmap.html'));
 
 /* ── Volunteer Routes (any logged-in user) ─────────────────────────── */
 app.get('/volunteer/register',     verifyToken, serveView('volunteer/register.html'));
 app.get('/volunteer/profile',      verifyToken, serveView('volunteer/profile.html'));
+app.get('/volunteer/campaigns',    verifyToken, serveView('volunteer/campaigns.html'));
 app.get('/volunteer/achievements', verifyToken, serveView('volunteer/achievements.html'));
+app.get('/volunteer/scan',         verifyToken, serveView('volunteer/scan.html'));
+app.get('/volunteer/certificates', verifyToken, requireRole('Volunteer'), serveView('volunteer/certificates.html'));
 
 app.get('/storefront', serveView('storefront/crafts.html'));
 app.get('/creator-profile/:id', serveView('creator-profile.html'));
@@ -158,7 +183,8 @@ app.use('/api/waste-requests',  wasteRequestRouter);
 app.use('/api/badges',          badgeRoutes);
 app.use('/api/price-directory', priceDirectoryRoutes);
 app.use('/api/medals',          medalRoutes);
-app.use('/api/admin-activities', adminActivityRoutes);
+app.use('/api/admin/activities', adminActivityRoutes);
+app.use('/api/heatmap-data',     heatmapRoutes);
 
 /* ── Global Error Handler ────────────────────────────────────────────────── */
 app.use((err, req, res, next) => {

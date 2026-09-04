@@ -19,7 +19,10 @@ exports.generateQR = async (req, res) => {
         if (campaigns.length === 0) {
             return res.status(404).json({ error: 'Campaign not found' });
         }
-        if (new Date(campaigns[0].date) < new Date()) {
+        const campaignDate = new Date(campaigns[0].date);
+        const endOfCampaignDay = new Date(campaignDate);
+        endOfCampaignDay.setHours(23, 59, 59, 999);
+        if (endOfCampaignDay < new Date()) {
             return res.status(400).json({ error: 'Cannot generate QR code: This campaign has already ended.' });
         }
 
@@ -34,7 +37,8 @@ exports.generateQR = async (req, res) => {
         return res.status(200).json({
             message: 'QR Code generated successfully',
             qrImage: qrDataURL,
-            campaignId
+            campaignId,
+            token
         });
     } catch (error) {
         console.error('Error generating QR code:', error);
@@ -49,10 +53,10 @@ exports.generateQR = async (req, res) => {
  */
 exports.scanAttendance = async (req, res) => {
     try {
-        const { token, volunteerId } = req.body;
+        const { token, volunteerId, campaignId: selectedCampaignId } = req.body;
 
-        if (!token || !volunteerId) {
-            return res.status(400).json({ error: 'Token and volunteerId are required.' });
+        if (!token || !volunteerId || !selectedCampaignId) {
+            return res.status(400).json({ error: 'Token, volunteerId, and campaignId are required.' });
         }
 
         // Verify the QR token
@@ -65,12 +69,19 @@ exports.scanAttendance = async (req, res) => {
 
         const campaignId = parseInt(decoded.campaignId, 10);
 
+        if (campaignId !== parseInt(selectedCampaignId, 10)) {
+            return res.status(400).json({ error: 'Invalid QR Code for the selected campaign.' });
+        }
+
         // Check if the campaign has already ended
         const [campaigns] = await db.query('SELECT * FROM CleanupCampaigns WHERE campaignId = ?', [campaignId]);
         if (campaigns.length === 0) {
             return res.status(404).json({ error: 'Campaign not found.' });
         }
-        if (new Date(campaigns[0].date) < new Date()) {
+        const campaignDate = new Date(campaigns[0].date);
+        const endOfCampaignDay = new Date(campaignDate);
+        endOfCampaignDay.setHours(23, 59, 59, 999);
+        if (endOfCampaignDay < new Date()) {
             return res.status(400).json({ error: "This campaign has already ended." });
         }
 
@@ -84,14 +95,23 @@ exports.scanAttendance = async (req, res) => {
             userId = volProfile[0].userId;
         }
 
-        // Verify if volunteer is actually registered for this campaign (optional but recommended)
         const [registrations] = await db.query(
             'SELECT * FROM CampaignRegistrations WHERE campaignId = ? AND volunteerId = ?',
             [campaignId, userId]
         );
 
+        // If volunteer wasn't pre-registered, auto-register them on-site; otherwise mark as Attended
         if (registrations.length === 0) {
-            return res.status(400).json({ error: 'Volunteer is not registered for this campaign.' });
+            await db.query(
+                'INSERT INTO CampaignRegistrations (campaignId, volunteerId, status) VALUES (?, ?, ?)',
+                [campaignId, userId, 'Attended']
+            );
+            await db.query('UPDATE CleanupCampaigns SET currentVolunteers = currentVolunteers + 1 WHERE campaignId = ?', [campaignId]);
+        } else {
+            await db.query(
+                "UPDATE CampaignRegistrations SET status = 'Attended' WHERE campaignId = ? AND volunteerId = ?",
+                [campaignId, userId]
+            );
         }
 
         // Determine hours attended (custom override or default to campaign duration)

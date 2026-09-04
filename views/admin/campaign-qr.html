@@ -1,66 +1,398 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Campaign QR Code - Admin View</title>
-    <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 100%; }
-        h1 { color: #2c3e50; font-size: 24px; margin-bottom: 20px; }
-        #qr-container { margin: 20px 0; min-height: 256px; display: flex; justify-content: center; align-items: center; }
-        img { max-width: 100%; border-radius: 8px; }
-        input[type="text"] { width: 80%; padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; }
-        button { background: #27ae60; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; transition: background 0.3s; }
-        button:hover { background: #219653; }
-        .error { color: #e74c3c; margin-top: 10px; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generate Campaign QR — WASTE2WORTH Admin</title>
+  <meta name="description" content="Generate attendance QR codes for cleanup campaigns.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    .qr-card {
+      background: var(--color-bg-card, #ffffff);
+      border-radius: var(--radius-lg, 16px);
+      border: 1px solid var(--color-border, #e0e0e0);
+      box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.06));
+      padding: var(--space-xl, 24px);
+      max-width: 680px;
+      margin: 0 auto var(--space-xl, 24px);
+    }
+    .qr-header {
+      text-align: center;
+      margin-bottom: var(--space-lg, 24px);
+    }
+    .qr-icon-badge {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(46, 125, 50, 0.1);
+      color: var(--color-primary, #2e7d32);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    .qr-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--color-text-primary, #1b5e20);
+      margin: 0 0 6px 0;
+    }
+    .qr-subtitle {
+      font-size: 14px;
+      color: var(--color-text-secondary, #666);
+      margin: 0;
+      line-height: 1.5;
+    }
+    .qr-preview-box {
+      margin: 24px 0;
+      padding: 24px;
+      background: #fafafa;
+      border: 2px dashed var(--color-border, #ddd);
+      border-radius: 12px;
+      text-align: center;
+      min-height: 280px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .qr-preview-box img {
+      max-width: 240px;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+      background: white;
+      padding: 12px;
+    }
+    .campaign-details-badge {
+      margin-top: 16px;
+      padding: 12px 16px;
+      background: #e8f5e9;
+      border: 1px solid #c8e6c9;
+      border-radius: 8px;
+      color: #1b5e20;
+      font-size: 13px;
+      line-height: 1.6;
+      text-align: left;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .alert-box {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-top: 16px;
+      display: none;
+    }
+    .alert-error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ffcdd2;
+    }
+    .alert-success {
+      background: #e8f5e9;
+      color: #1b5e20;
+      border: 1px solid #c8e6c9;
+    }
+    @media print {
+      body * { visibility: hidden; }
+      #printableArea, #printableArea * { visibility: visible; }
+      #printableArea { position: absolute; left: 0; top: 0; width: 100%; }
+    }
+  </style>
 </head>
 <body>
+<div class="app-layout">
 
-<div class="container">
-    <h1>Generate Campaign QR</h1>
-    <input type="text" id="campaignId" placeholder="Enter Campaign ID" value="1">
-    <button onclick="generateQR()">Generate QR Code</button>
-    
-    <div id="qr-container">
-        <!-- QR Code will be injected here -->
-        <p style="color: #7f8c8d;">QR code will appear here.</p>
+  <!-- ── Admin Sidebar ────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <span class="material-icons-outlined">eco</span> WASTE2WORTH
     </div>
-    <div id="error-message" class="error"></div>
+    <nav class="sidebar-nav">
+      <a href="/dashboard/admin" class="nav-item">
+        <span class="material-icons-outlined">admin_panel_settings</span> Dashboard
+      </a>
+        <a href="/dashboard/admin/impact" class="nav-item">
+          <span class="material-icons-outlined">trending_up</span> Impact Dashboard
+        </a>
+      <a href="/dashboard/admin/campaigns" class="nav-item">
+        <span class="material-icons-outlined">event</span> Campaigns
+      </a>
+      <a href="/dashboard/admin/campaign-qr" class="nav-item active">
+        <span class="material-icons-outlined">qr_code_2</span> Generate QR Code
+      </a>
+      <a href="/dashboard/admin/waste-portal" class="nav-item">
+        <span class="material-icons-outlined">recycling</span> Waste Portal
+      </a>
+      <a href="/dashboard/admin/product-story" class="nav-item">
+        <span class="material-icons-outlined">menu_book</span> Product Stories
+      </a>
+      <a href="/dashboard/admin/achievements" class="nav-item">
+        <span class="material-icons-outlined">emoji_events</span> Achievements & Badges
+      </a>
+      <a href="/dashboard/admin/price-directory" class="nav-item">
+        <span class="material-icons-outlined">sell</span> Price Directory
+      </a>
+      <a href="/dashboard/admin/volunteers" class="nav-item">
+        <span class="material-icons-outlined">volunteer_activism</span> Volunteers
+      </a>
+        <a href="/dashboard/admin/heatmap" class="nav-item">
+          <span class="material-icons-outlined">map</span> Waste Heat Map
+        </a>
+
+      <a href="/logout" id="logoutBtn" class="nav-item">
+        <span class="material-icons-outlined">logout</span> Logout
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div style="font-size: 12px; color: rgba(255,255,255,0.5); text-align: center;">&copy; 2026 Admin Portal</div>
+    </div>
+  </aside>
+
+  <div class="main-wrapper">
+
+    <!-- ── Header ─────────────────────────────────────── -->
+    <header class="header">
+      <button id="sidebarToggle" class="sidebar-toggle" aria-label="Toggle Navigation">
+        <span class="material-icons-outlined">menu</span>
+      </button>
+      <div class="header-search">
+        <span class="material-icons-outlined">qr_code_2</span>
+        <input type="text" placeholder="Campaign Attendance QR Codes" aria-label="Page title" readonly style="cursor:default;">
+      </div>
+      <div class="header-user" id="headerUser">
+        <div class="user-info">
+          <span class="user-name">Admin</span>
+          <span class="user-role">Admin</span>
+        </div>
+        <div class="user-avatar">A</div>
+      </div>
+    </header>
+
+    <!-- ── Main Content ─────────────────────────────────── -->
+    <main class="main-content">
+      <div class="qr-card animate-slide-up">
+        <div class="qr-header">
+          <div class="qr-icon-badge">
+            <span class="material-icons-outlined" style="font-size:36px;">qr_code_2</span>
+          </div>
+          <h1 class="qr-title">Generate Campaign QR Code</h1>
+          <p class="qr-subtitle">Select an official cleanup campaign to generate a secure attendance QR code. Volunteers scan this code on-site using their mobile camera to verify attendance and earn Green Points.</p>
+        </div>
+
+        <form id="qrGenForm" onsubmit="event.preventDefault(); generateQR();">
+          <div class="form-group">
+            <label class="form-label" for="campaignSelect">Select Scheduled Campaign</label>
+            <select id="campaignSelect" class="form-input" onchange="onSelectCampaign(this.value)">
+              <option value="">Loading campaigns...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="campaignId">Or Enter Campaign ID Directly</label>
+            <input type="number" id="campaignId" class="form-input" placeholder="e.g. 1" value="1" required>
+          </div>
+
+          <button type="submit" id="generateBtn" class="btn btn-primary-gradient btn-block" style="padding:12px;font-size:15px;font-weight:600;">
+            <span class="material-icons-outlined">qr_code</span> Generate QR Code
+          </button>
+        </form>
+
+        <div id="error-message" class="alert-box alert-error"></div>
+        <div id="success-message" class="alert-box alert-success"></div>
+
+        <div id="printableArea" class="qr-preview-box">
+          <div id="qr-container">
+            <span class="material-icons-outlined" style="font-size:48px;color:#bbb;margin-bottom:8px;">qr_code_scanner</span>
+            <p style="color: #7f8c8d; margin:0; font-size:14px;">Select a campaign and click "Generate QR Code" to view the code.</p>
+          </div>
+          <div id="campaignDetails" style="display:none;" class="campaign-details-badge"></div>
+        </div>
+
+        <div id="actionButtons" class="btn-row" style="display:none; flex-wrap:wrap; justify-content:center; gap:10px;">
+          <button type="button" class="btn btn-outline" onclick="printQR()" style="display:inline-flex;align-items:center;gap:6px;">
+            <span class="material-icons-outlined">print</span> Print QR Flyer
+          </button>
+          <a id="downloadBtn" download="campaign-qr.png" class="btn btn-primary-gradient" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;">
+            <span class="material-icons-outlined">download</span> Download Image
+          </a>
+          <button type="button" id="copyTokenBtn" class="btn btn-outline" onclick="copyToken()" style="display:inline-flex;align-items:center;gap:6px;">
+            <span class="material-icons-outlined">content_copy</span> Copy Token
+          </button>
+        </div>
+      </div>
+    </main>
+
+  </div>
 </div>
 
 <script>
-    async function generateQR() {
-        const campaignId = document.getElementById('campaignId').value;
-        const qrContainer = document.getElementById('qr-container');
-        const errorMessage = document.getElementById('error-message');
-        
-        qrContainer.innerHTML = '<p>Loading...</p>';
-        errorMessage.innerText = '';
+  let campaignsList = [];
 
-        if (!campaignId) {
-            errorMessage.innerText = 'Please enter a Campaign ID';
-            qrContainer.innerHTML = '';
-            return;
-        }
+  // Sidebar toggle
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const appLayout = document.querySelector('.app-layout');
+  if (sidebarToggle && appLayout) {
+    sidebarToggle.addEventListener('click', () => appLayout.classList.toggle('sidebar-collapsed'));
+  }
 
-        try {
-            const response = await fetch(`/api/campaigns/${campaignId}/qr-code`);
-            const data = await response.json();
-            
-            if (response.ok) {
-                qrContainer.innerHTML = `<img src="${data.qrImage}" alt="Campaign QR Code">`;
-            } else {
-                errorMessage.innerText = data.error || 'Failed to generate QR code';
-                qrContainer.innerHTML = '';
-            }
-        } catch (error) {
-            console.error('Error fetching QR code:', error);
-            errorMessage.innerText = 'An error occurred while generating the QR code.';
-            qrContainer.innerHTML = '';
-        }
+  // Load user info in header
+  async function loadUserInfo() {
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      if (!res.ok) return;
+      const u = await res.json();
+      if (u.name) {
+        document.querySelectorAll('.user-name').forEach(el => el.textContent = u.name);
+        document.querySelectorAll('.user-avatar').forEach(el => el.textContent = u.name.charAt(0).toUpperCase());
+      }
+      if (u.role) {
+        document.querySelectorAll('.user-role').forEach(el => el.textContent = u.role);
+      }
+    } catch (_) {}
+  }
+  loadUserInfo();
+
+  // Load available campaigns into dropdown
+  async function loadCampaigns() {
+    const sel = document.getElementById('campaignSelect');
+    try {
+      const res = await fetch('/api/campaigns');
+      if (!res.ok) throw new Error('Failed to load campaigns');
+      campaignsList = await res.json();
+
+      if (!campaignsList.length) {
+        sel.innerHTML = '<option value="">No campaigns available</option>';
+        return;
+      }
+
+      sel.innerHTML = '<option value="">-- Choose a Campaign --</option>' +
+        campaignsList.map(c => {
+          const d = new Date(c.date).toLocaleDateString();
+          return `<option value="${c.campaignId}">#${c.campaignId} — ${c.title} (${c.boundaryZone || 'Zone'} | ${d})</option>`;
+        }).join('');
+
+      // Check if campaignId was passed in URL query (e.g. ?campaignId=3)
+      const urlParams = new URLSearchParams(window.location.search);
+      const qId = urlParams.get('campaignId');
+      const targetC = qId 
+        ? campaignsList.find(c => String(c.campaignId) === String(qId))
+        : (campaignsList.find(c => String(c.campaignId) === '1') || campaignsList[0]);
+
+      if (targetC) {
+        sel.value = targetC.campaignId;
+        document.getElementById('campaignId').value = targetC.campaignId;
+        generateQR();
+      } else if (qId) {
+        document.getElementById('campaignId').value = qId;
+        generateQR();
+      }
+    } catch (e) {
+      sel.innerHTML = '<option value="">Failed to load campaigns</option>';
     }
-</script>
+  }
+  loadCampaigns();
 
+  function onSelectCampaign(val) {
+    if (val) {
+      document.getElementById('campaignId').value = val;
+      generateQR();
+    }
+  }
+
+  async function generateQR() {
+    const campaignId = document.getElementById('campaignId').value;
+    const qrContainer = document.getElementById('qr-container');
+    const errorMessage = document.getElementById('error-message');
+    const successMessage = document.getElementById('success-message');
+    const actionButtons = document.getElementById('actionButtons');
+    const campaignDetails = document.getElementById('campaignDetails');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    errorMessage.style.display = 'none';
+    successMessage.style.display = 'none';
+    qrContainer.innerHTML = '<p style="color:#666;">Generating QR code...</p>';
+
+    if (!campaignId) {
+      errorMessage.innerText = 'Please enter a Campaign ID';
+      errorMessage.style.display = 'block';
+      qrContainer.innerHTML = '<p style="color:#7f8c8d;">QR code will appear here.</p>';
+      actionButtons.style.display = 'none';
+      campaignDetails.style.display = 'none';
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/campaigns/${campaignId}/qr-code`);
+      const data = await response.json();
+
+      if (response.ok) {
+        qrContainer.innerHTML = `<img src="${data.qrImage}" alt="Campaign #${campaignId} QR Code">`;
+        downloadBtn.href = data.qrImage;
+        downloadBtn.download = `campaign-${campaignId}-attendance-qr.png`;
+        actionButtons.style.display = 'flex';
+
+        // Display campaign details if found
+        const c = campaignsList.find(item => String(item.campaignId) === String(campaignId));
+        if (c) {
+          campaignDetails.innerHTML = `
+            <strong>${c.title}</strong> (Campaign #${c.campaignId})<br>
+            📅 Date: ${new Date(c.date).toLocaleDateString()} &nbsp;|&nbsp; 📍 Location: ${c.boundaryZone || 'N/A'}<br>
+            👥 Volunteers: ${c.currentVolunteers || 0}/${c.participantCap || 'No limit'}
+          `;
+          campaignDetails.style.display = 'block';
+        } else {
+          campaignDetails.innerHTML = `<strong>Campaign #${campaignId}</strong> attendance QR code is ready.`;
+          campaignDetails.style.display = 'block';
+        }
+
+        window.currentQRToken = data.token || '';
+        successMessage.innerText = 'QR Code generated successfully! Ready for volunteer scanning.';
+        successMessage.style.display = 'block';
+      } else {
+        errorMessage.innerText = data.error || 'Failed to generate QR code';
+        errorMessage.style.display = 'block';
+        qrContainer.innerHTML = '<p style="color:#e74c3c;">Failed to generate QR code.</p>';
+        actionButtons.style.display = 'none';
+        campaignDetails.style.display = 'none';
+      }
+    } catch (error) {
+      console.error('Error fetching QR code:', error);
+      errorMessage.innerText = 'An error occurred while generating the QR code.';
+      errorMessage.style.display = 'block';
+      qrContainer.innerHTML = '';
+      actionButtons.style.display = 'none';
+      campaignDetails.style.display = 'none';
+    }
+  }
+
+  function printQR() {
+    window.print();
+  }
+
+  function copyToken() {
+    if (!window.currentQRToken) return;
+    navigator.clipboard.writeText(window.currentQRToken).then(() => {
+      const btn = document.getElementById('copyTokenBtn');
+      const orig = btn.innerHTML;
+      btn.innerHTML = '<span class="material-icons-outlined">check</span> Copied!';
+      setTimeout(() => { btn.innerHTML = orig; }, 2000);
+    }).catch(() => {
+      prompt('Attendance Token:', window.currentQRToken);
+    });
+  }
+</script>
 </body>
 </html>
+

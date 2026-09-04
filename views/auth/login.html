@@ -54,7 +54,7 @@
         <span class="material-icons-outlined" style="font-size: 18px;">error_outline</span>
         <span id="authErrorMessage">Invalid credentials</span>
       </div>
-      <form id="loginForm">
+      <form id="loginForm" action="/api/auth/login" method="POST">
         <div class="form-group">
           <label class="form-label" for="email">Email Address</label>
           <input type="email" id="email" name="email" class="form-input" placeholder="you@example.com" required autocomplete="email">

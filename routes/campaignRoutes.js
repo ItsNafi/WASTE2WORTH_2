@@ -5,5 +5,5 @@ const { verifyToken } = require('../middleware/authMiddleware');
 const { requireRole } = require('../middleware/roleMiddleware');
 
 router.get('/', verifyToken, CampaignController.getCampaigns);
-router.post('/:campaignId/register', verifyToken, requireRole('Admin'), CampaignController.registerForCampaign);
+router.post('/:campaignId/register', verifyToken, requireRole('Volunteer', 'Citizen', 'Admin'), CampaignController.registerForCampaign);
 module.exports = router;

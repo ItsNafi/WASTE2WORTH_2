@@ -17,6 +17,18 @@
       <span class="material-icons-outlined">eco</span> WASTE2WORTH
     </div>
     <nav class="sidebar-nav">
+      <a href="/dashboard/admin" class="nav-item">
+        <span class="material-icons-outlined">admin_panel_settings</span> Dashboard
+      </a>
+        <a href="/dashboard/admin/impact" class="nav-item">
+          <span class="material-icons-outlined">trending_up</span> Impact Dashboard
+        </a>
+      <a href="/dashboard/admin/campaigns" class="nav-item active">
+        <span class="material-icons-outlined">event</span> Campaigns
+      </a>
+      <a href="/dashboard/admin/campaign-qr" class="nav-item">
+        <span class="material-icons-outlined">qr_code_2</span> Generate QR Code
+      </a>
       <a href="/dashboard/admin/waste-portal" class="nav-item">
         <span class="material-icons-outlined">recycling</span> Waste Portal
       </a>
@@ -32,6 +44,10 @@
       <a href="/dashboard/admin/volunteers" class="nav-item">
         <span class="material-icons-outlined">volunteer_activism</span> Volunteers
       </a>
+        <a href="/dashboard/admin/heatmap" class="nav-item">
+          <span class="material-icons-outlined">map</span> Waste Heat Map
+        </a>
+
       <a href="/logout" id="logoutBtn" class="nav-item">
         <span class="material-icons-outlined">logout</span> Logout
       </a>
@@ -48,34 +64,68 @@
         <span class="material-icons-outlined">menu</span>
       </button>
       <div class="header-search">
-        <span class="material-icons-outlined">search</span>
-        <input type="text" placeholder="Search campaigns..." aria-label="Search">
+        <span class="material-icons-outlined">event</span>
+        <input type="text" placeholder="Manage Cleanup Campaigns" aria-label="Page title" readonly style="cursor:default;">
       </div>
       <div class="header-user">
-        <div class="green-points-badge">
-          <span class="material-icons-outlined" style="font-size:16px;">stars</span>
-          <span class="green-points-value">0</span>
-        </div>
         <div class="user-info">
-          <span class="user-name">User</span>
-          <span class="user-role">Role</span>
+          <span class="user-name">Admin</span>
+          <span class="user-role">Admin</span>
         </div>
-        <div class="user-avatar">U</div>
+        <div class="user-avatar">A</div>
       </div>
     </header>
 
     <main class="main-content">
       <div class="page-header animate-fade-in">
-        <h1 class="page-title">Upcoming Cleanup Campaigns</h1>
-        <p class="page-subtitle">Join community-driven initiatives to clean our neighbourhoods and earn Green Points.</p>
+        <h1 class="page-title">Cleanup Campaigns Management</h1>
+        <p class="page-subtitle">Launch community cleanup drives, set volunteer caps, and generate on-site attendance QR codes.</p>
       </div>
 
-      <div class="card animate-slide-up">
+      <!-- Launch New Campaign Form -->
+      <div class="card animate-slide-up" style="margin-bottom: 24px;">
         <div class="card-header">
-          <h2 class="card-title">Available Campaigns</h2>
+          <h2 class="card-title" style="display:flex;align-items:center;gap:8px;">
+            <span class="material-icons-outlined" style="color:var(--color-primary);">add_circle</span> Launch New Campaign
+          </h2>
+        </div>
+        <div style="padding: 24px;">
+          <form id="adminCampaignForm">
+            <div class="form-group">
+              <label class="form-label" for="campaignTitle">Campaign Title *</label>
+              <input type="text" id="campaignTitle" class="form-input" placeholder="e.g., Clean & Green Dhanmondi Lake" required>
+            </div>
+            <div class="form-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+              <div class="form-group">
+                <label class="form-label" for="campaignDate">Date *</label>
+                <input type="date" id="campaignDate" class="form-input" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="campaignCap">Max Volunteers *</label>
+                <input type="number" id="campaignCap" class="form-input" value="50" min="1" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="campaignZone">Boundary Zone / Location *</label>
+              <input type="text" id="campaignZone" class="form-input" placeholder="e.g., Dhanmondi Lake, Sector 4, Dhaka" required>
+            </div>
+            <button type="submit" class="btn btn-primary-gradient btn-block" style="padding:12px;font-size:15px;font-weight:600;">
+              <span class="material-icons-outlined">rocket_launch</span> Launch Campaign
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Scheduled Campaigns List -->
+      <div class="card animate-slide-up">
+        <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+          <h2 class="card-title">Scheduled Campaigns</h2>
+          <a href="/dashboard/admin/campaign-qr" class="btn btn-outline btn-sm" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;">
+            <span class="material-icons-outlined" style="font-size:16px;">qr_code_2</span> Go to QR Generator
+          </a>
         </div>
         <div style="padding:var(--space-md);">
-          <div class="product-grid" id="campaignsFeed">
+          <div class="product-grid" id="adminCampaignsFeed">
             <div class="loading-spinner" style="grid-column:1/-1;"><div class="spinner"></div></div>
           </div>
         </div>
@@ -84,6 +134,14 @@
   </div>
 </div>
 <script src="/js/app.js" defer></script>
+<script>
+  // Sidebar toggle
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const appLayout = document.querySelector('.app-layout');
+  if (sidebarToggle && appLayout) {
+    sidebarToggle.addEventListener('click', () => appLayout.classList.toggle('sidebar-collapsed'));
+  }
+</script>
 </body>
 </html>
 

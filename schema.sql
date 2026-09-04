@@ -350,6 +350,26 @@ CREATE TABLE `notifications` (
   CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`userId`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ------------------------------------------------------------
+-- Table: payments
+-- ------------------------------------------------------------
+DROP TABLE IF EXISTS `payments`;
+CREATE TABLE `payments` (
+  `paymentId` int(11) NOT NULL AUTO_INCREMENT,
+  `senderId` int(11) NOT NULL,
+  `receiverId` int(11) DEFAULT NULL COMMENT 'NULL if Centralized Cleanup Campaign Fund',
+  `amount` decimal(10,2) NOT NULL,
+  `type` enum('BhangariToCitizen','BhangariToVolunteer','CustomerCheckout') NOT NULL,
+  `referenceId` int(11) NOT NULL COMMENT 'scrapId, campaignRegistrationId, or craftId',
+  `status` enum('Pending','Completed','Failed') DEFAULT 'Completed',
+  `createdAt` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`paymentId`),
+  KEY `idx_payments_sender` (`senderId`),
+  KEY `idx_payments_receiver` (`receiverId`),
+  CONSTRAINT `payments_ibfk_1` FOREIGN KEY (`senderId`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `payments_ibfk_2` FOREIGN KEY (`receiverId`) REFERENCES `users` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
